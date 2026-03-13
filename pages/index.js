@@ -2,35 +2,35 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { supabase } from "../lib/supabase"
 
-export default function Home() {
+export default function Home(){
 
-  const [form, setForm] = useState({
-    pair: "",
-    session: "",
-    weekly_bias: "",
-    daily_bias: "",
-    context_4h: "",
-    retest: "",
-    entry_type: "",
-    quality: "",
-    result: "",
-    r_multiple: "",
-    explanation: "",
-    notes: "",
-    chart_link: "",
-    approach_type: "",
-    level_freshness: "",
-    space_to_opposing_zone: "",
-    momentum_state: "",
-    structure_state: "",
-    zone_clarity: ""
+  const [form,setForm] = useState({
+    pair:"",
+    session:"",
+    weekly_bias:"",
+    daily_bias:"",
+    context_4h:"",
+    retest:"",
+    entry_type:"",
+    quality:"",
+    result:"",
+    r_multiple:"",
+    explanation:"",
+    notes:"",
+    chart_link:"",
+    approach_type:"",
+    level_freshness:"",
+    space_to_opposing_zone:"",
+    momentum_state:"",
+    structure_state:"",
+    zone_clarity:""
   })
 
-  const [trades, setTrades] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [trades,setTrades] = useState([])
+  const [loading,setLoading] = useState(false)
 
   function handleChange(e){
-    setForm({...form, [e.target.name]: e.target.value})
+    setForm({...form,[e.target.name]:e.target.value})
   }
 
   async function saveTrade(){
@@ -50,28 +50,29 @@ export default function Home() {
       alert("Error saving trade")
       console.log(error)
     } else {
+
       alert("Trade saved!")
 
       setForm({
-        pair: "",
-        session: "",
-        weekly_bias: "",
-        daily_bias: "",
-        context_4h: "",
-        retest: "",
-        entry_type: "",
-        quality: "",
-        result: "",
-        r_multiple: "",
-        explanation: "",
-        notes: "",
-        chart_link: "",
-        approach_type: "",
-        level_freshness: "",
-        space_to_opposing_zone: "",
-        momentum_state: "",
-        structure_state: "",
-        zone_clarity: ""
+        pair:"",
+        session:"",
+        weekly_bias:"",
+        daily_bias:"",
+        context_4h:"",
+        retest:"",
+        entry_type:"",
+        quality:"",
+        result:"",
+        r_multiple:"",
+        explanation:"",
+        notes:"",
+        chart_link:"",
+        approach_type:"",
+        level_freshness:"",
+        space_to_opposing_zone:"",
+        momentum_state:"",
+        structure_state:"",
+        zone_clarity:""
       })
 
       fetchTrades()
@@ -82,10 +83,10 @@ export default function Home() {
 
   async function fetchTrades(){
 
-    const { data, error } = await supabase
+    const { data,error } = await supabase
       .from("trades")
       .select("*")
-      .order("created_at", {ascending:false})
+      .order("created_at",{ascending:false})
 
     if(!error){
       setTrades(data || [])
@@ -97,13 +98,14 @@ export default function Home() {
     fetchTrades()
   },[])
 
-  return (
+  return(
 
     <div style={{padding:"40px",fontFamily:"Arial",background:"#f2fff6",minHeight:"100vh"}}>
 
       <div style={{display:"flex",gap:"20px",marginBottom:"30px"}}>
         <Link href="/">Journal</Link>
         <Link href="/dashboard">Dashboard</Link>
+        <Link href="/coach">AI Coach</Link>
       </div>
 
       <h1>Atlas Edge Lab</h1>
@@ -156,7 +158,6 @@ export default function Home() {
 
       </div>
 
-
       <div style={{marginTop:"40px"}}>
 
         <h2>Saved Trades</h2>
@@ -200,6 +201,7 @@ export default function Home() {
       </div>
 
     </div>
+
   )
 
 }
