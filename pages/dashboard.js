@@ -25,9 +25,10 @@ export default function Dashboard() {
 
   return (
     <div style={{ padding: "40px", fontFamily: "Arial", background: "#f2fff6", minHeight: "100vh" }}>
-      <div style={{ display: "flex", gap: "16px", marginBottom: "24px" }}>
+      <div style={{ display: "flex", gap: "20px", marginBottom: "30px" }}>
         <Link href="/">Journal</Link>
         <Link href="/dashboard">Dashboard</Link>
+        <Link href="/coach">AI Coach</Link>
       </div>
 
       <h1>Atlas Edge Lab Dashboard</h1>
