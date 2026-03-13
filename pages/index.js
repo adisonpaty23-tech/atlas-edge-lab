@@ -19,14 +19,48 @@ export default function Home() {
     approach_type: "",
     level_freshness: "",
     space_to_opposing_zone: "",
-    momentum_state: ""
+    momentum_state: "",
+    structure_state: "",
+    zone_clarity: ""
   })
 
   const [trades, setTrades] = useState([])
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value })
+  }
+
+  async function handleFileUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+
+    const fileExt = file.name.split(".").pop()
+    const fileName = `${Date.now()}.${fileExt}`
+
+    const { error: uploadError } = await supabase.storage
+      .from("charts")
+      .upload(fileName, file)
+
+    if (uploadError) {
+      alert("Image upload failed")
+      console.log(uploadError)
+      setUploading(false)
+      return
+    }
+
+    const { data } = supabase.storage.from("charts").getPublicUrl(fileName)
+
+    setForm((prev) => ({
+      ...prev,
+      image_url: data.publicUrl
+    }))
+
+    setUploading(false)
+    alert("Image uploaded!")
   }
 
   async function saveTrade() {
@@ -61,7 +95,9 @@ export default function Home() {
         approach_type: "",
         level_freshness: "",
         space_to_opposing_zone: "",
-        momentum_state: ""
+        momentum_state: "",
+        structure_state: "",
+        zone_clarity: ""
       })
       fetchTrades()
     }
@@ -107,7 +143,17 @@ export default function Home() {
           onChange={handleChange}
         />
         <input name="momentum_state" placeholder="Momentum State" value={form.momentum_state} onChange={handleChange} />
-        <input name="image_url" placeholder="Image URL (temporary for now)" value={form.image_url} onChange={handleChange} />
+        <input name="structure_state" placeholder="Structure State" value={form.structure_state} onChange={handleChange} />
+        <input name="zone_clarity" placeholder="Zone Clarity" value={form.zone_clarity} onChange={handleChange} />
+
+        <input type="file" accept="image/*" onChange={handleFileUpload} />
+        {uploading && <p>Uploading image...</p>}
+        {form.image_url && (
+          <div>
+            <p>Uploaded image:</p>
+            <img src={form.image_url} alt="chart" style={{ width: "200px", borderRadius: "8px" }} />
+          </div>
+        )}
 
         <textarea
           name="explanation"
@@ -153,6 +199,13 @@ export default function Home() {
               <div style={{ marginTop: "8px", fontSize: "14px" }}>
                 {trade.explanation || "No explanation"}
               </div>
+              {trade.image_url && (
+                <img
+                  src={trade.image_url}
+                  alt="saved chart"
+                  style={{ width: "220px", marginTop: "12px", borderRadius: "8px" }}
+                />
+              )}
             </div>
           ))}
         </div>
