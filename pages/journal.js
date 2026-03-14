@@ -122,7 +122,7 @@ export default function Journal() {
           <Link href="/coach" style={navBtnLink}>
             AI Coach
           </Link>
-          <button style={navBtn}>Reports</button>
+          <Link href="/model" style={navBtnLink}>My Model</Link>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1.35fr 0.95fr", gap: "20px", marginBottom: "20px" }}>
