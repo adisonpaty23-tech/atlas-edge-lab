@@ -114,7 +114,7 @@ export default function Journal() {
             Dashboard
           </Link>
           <button style={navBtn}>My Model</button>
-          <button style={navBtn}>Example Library</button>
+          <Link href="/examples" style={navBtnLink}>Example Library</Link>
           <Link href="/journal" style={activeNav}>
             Trade Journal
           </Link>
