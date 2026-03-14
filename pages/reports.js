@@ -19,13 +19,26 @@ export default function Reports() {
   }, [])
 
   const analytics = useMemo(() => {
+    const highScoreTrades = trades.filter((t) => getEdgeScore(t) >= 7)
+    const midScoreTrades = trades.filter((t) => getEdgeScore(t) >= 4 && getEdgeScore(t) <= 6)
+    const lowScoreTrades = trades.filter((t) => getEdgeScore(t) <= 3)
+
     return {
       bySession: buildStats(trades, "session"),
       byPair: buildStats(trades, "pair"),
       byEntry: buildStats(trades, "entry_type"),
       byMomentum: buildStats(trades, "momentum_state"),
       byFreshness: buildStats(trades, "level_freshness"),
-      byRetest: buildStats(trades, "retest")
+      byRetest: buildStats(trades, "retest"),
+      highScoreCount: highScoreTrades.length,
+      midScoreCount: midScoreTrades.length,
+      lowScoreCount: lowScoreTrades.length,
+      highScoreWinRate: getWinRate(highScoreTrades),
+      midScoreWinRate: getWinRate(midScoreTrades),
+      lowScoreWinRate: getWinRate(lowScoreTrades),
+      avgEdgeScore: trades.length
+        ? (trades.reduce((sum, t) => sum + getEdgeScore(t), 0) / trades.length).toFixed(1)
+        : "0.0"
     }
   }, [trades])
 
@@ -52,21 +65,13 @@ export default function Reports() {
             marginBottom: "20px"
           }}
         >
-          <Link href="/dashboard" style={navBtnLink}>
-            Dashboard
-          </Link>
-          <button style={navBtn}>My Model</button>
-          <button style={navBtn}>Example Library</button>
-          <Link href="/journal" style={navBtnLink}>
-            Trade Journal
-          </Link>
+          <Link href="/dashboard" style={navBtnLink}>Dashboard</Link>
+          <Link href="/model" style={navBtnLink}>My Model</Link>
+          <Link href="/examples" style={navBtnLink}>Example Library</Link>
+          <Link href="/journal" style={navBtnLink}>Trade Journal</Link>
           <button style={navBtn}>Screenshot AI</button>
-          <Link href="/coach" style={navBtnLink}>
-            AI Coach
-          </Link>
-          <Link href="/reports" style={activeNav}>
-            Reports
-          </Link>
+          <Link href="/coach" style={navBtnLink}>AI Coach</Link>
+          <Link href="/reports" style={activeNav}>Reports</Link>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1.35fr 0.95fr", gap: "20px", marginBottom: "20px" }}>
@@ -82,7 +87,7 @@ export default function Reports() {
           >
             <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
               <span style={pillDark}>Reports</span>
-              <span style={pillDark}>Pattern Breakdown</span>
+              <span style={pillDark}>Edge Score Breakdown</span>
             </div>
 
             <div style={{ fontSize: "60px", fontWeight: 700, lineHeight: 1.02, marginBottom: "18px" }}>
@@ -90,8 +95,7 @@ export default function Reports() {
             </div>
 
             <div style={{ fontSize: "22px", lineHeight: 1.45, maxWidth: "820px", color: "rgba(255,255,255,0.92)" }}>
-              Break performance down by session, pair, entry type, momentum, freshness, and retest behavior so the coach
-              can explain what truly drives your winners and losers.
+              Break performance down by session, pair, entry type, and edge score so the system can prove whether your best setups truly outperform the weak ones.
             </div>
 
             <div style={{ display: "flex", gap: "14px", marginTop: "28px", flexWrap: "wrap" }}>
@@ -105,23 +109,69 @@ export default function Reports() {
           </div>
 
           <div style={whiteCardLarge}>
-            <div style={{ fontSize: "32px", fontWeight: 700, marginBottom: "6px" }}>Report Focus</div>
+            <div style={{ fontSize: "32px", fontWeight: 700, marginBottom: "6px" }}>Score Focus</div>
             <div style={{ color: "#64748b", fontSize: "18px", marginBottom: "28px" }}>
-              What this page is measuring
+              What this page is measuring now
             </div>
 
             <div style={{ display: "grid", gap: "16px" }}>
               {[
-                "1. Win rate by session",
-                "2. Win rate by pair",
-                "3. Win rate by entry type",
-                "4. Win rate by chart context"
+                "1. High-score trade win rate",
+                "2. Mid-score trade win rate",
+                "3. Low-score trade win rate",
+                "4. Average edge score across all trades"
               ].map((item) => (
                 <div key={item} style={loopCard}>
                   {item}
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
+          <div style={statWrap}>
+            <div>
+              <div style={{ color: "#64748b", fontSize: "18px", marginBottom: "18px" }}>High Score Trades</div>
+              <div style={{ fontSize: "52px", fontWeight: 700, lineHeight: 1 }}>{analytics.highScoreWinRate}%</div>
+              <div style={{ color: "#64748b", fontSize: "17px", marginTop: "18px" }}>
+                {analytics.highScoreCount} trades scored 7+/10
+              </div>
+            </div>
+            <div style={statIcon}>A</div>
+          </div>
+
+          <div style={statWrap}>
+            <div>
+              <div style={{ color: "#64748b", fontSize: "18px", marginBottom: "18px" }}>Mid Score Trades</div>
+              <div style={{ fontSize: "52px", fontWeight: 700, lineHeight: 1 }}>{analytics.midScoreWinRate}%</div>
+              <div style={{ color: "#64748b", fontSize: "17px", marginTop: "18px" }}>
+                {analytics.midScoreCount} trades scored 4–6/10
+              </div>
+            </div>
+            <div style={statIcon}>B</div>
+          </div>
+
+          <div style={statWrap}>
+            <div>
+              <div style={{ color: "#64748b", fontSize: "18px", marginBottom: "18px" }}>Low Score Trades</div>
+              <div style={{ fontSize: "52px", fontWeight: 700, lineHeight: 1 }}>{analytics.lowScoreWinRate}%</div>
+              <div style={{ color: "#64748b", fontSize: "17px", marginTop: "18px" }}>
+                {analytics.lowScoreCount} trades scored 0–3/10
+              </div>
+            </div>
+            <div style={statIcon}>C</div>
+          </div>
+
+          <div style={statWrap}>
+            <div>
+              <div style={{ color: "#64748b", fontSize: "18px", marginBottom: "18px" }}>Average Edge Score</div>
+              <div style={{ fontSize: "52px", fontWeight: 700, lineHeight: 1 }}>{analytics.avgEdgeScore}/10</div>
+              <div style={{ color: "#64748b", fontSize: "17px", marginTop: "18px" }}>
+                Average setup quality
+              </div>
+            </div>
+            <div style={statIcon}>◎</div>
           </div>
         </div>
 
@@ -208,6 +258,28 @@ function buildStats(rows, field) {
       return { label, count: list.length, winRate }
     })
     .sort((a, b) => b.winRate - a.winRate)
+}
+
+function getWinRate(rows) {
+  if (!rows.length) return 0
+  const wins = rows.filter((t) => t.result === "Win").length
+  return Math.round((wins / rows.length) * 100)
+}
+
+function getEdgeScore(trade) {
+  let score = 0
+
+  if (trade.weekly_bias && trade.daily_bias && trade.weekly_bias === trade.daily_bias && trade.weekly_bias !== "Neutral") score += 2
+  if (trade.retest === "First") score += 1
+  if (trade.quality === "Clean" || trade.quality === "GOOD" || trade.quality === "Good") score += 1
+  if (trade.session === "London" || trade.session === "New York") score += 1
+  if (trade.entry_type === "Rejection" || trade.entry_type === "Sweep") score += 1
+  if (trade.approach_type === "Impulse") score += 1
+  if (trade.level_freshness === "Fresh") score += 1
+  if (trade.space_to_opposing_zone === "High") score += 1
+  if (trade.momentum_state === "Strong") score += 1
+
+  return score
 }
 
 const whiteCard = {
@@ -305,4 +377,29 @@ const navBtnLink = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center"
+}
+
+const statWrap = {
+  background: "rgba(255,255,255,0.92)",
+  border: "1px solid #d1f0da",
+  borderRadius: "30px",
+  padding: "30px",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  minHeight: "195px",
+  boxShadow: "0 12px 30px rgba(20, 120, 74, 0.06)"
+}
+
+const statIcon = {
+  width: "70px",
+  height: "70px",
+  borderRadius: "22px",
+  background: "#e9f8ef",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: "#0f8b62",
+  fontSize: "32px",
+  fontWeight: 700
 }
