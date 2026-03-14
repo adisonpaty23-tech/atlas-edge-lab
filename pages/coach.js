@@ -87,7 +87,7 @@ export default function Coach() {
           <Link href="/coach" style={activeNav}>
             AI Coach
           </Link>
-          <button style={navBtn}>Reports</button>
+          <Link href="/reports" style={navBtnLink}>Reports</Link>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1.35fr 0.95fr", gap: "20px", marginBottom: "20px" }}>
