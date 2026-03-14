@@ -31,6 +31,12 @@ export default function Dashboard() {
     const bestSession = getBestBucket(trades, "session")
     const bestPair = getBestBucket(trades, "pair")
 
+    const avgEdgeScore = total
+      ? (
+          trades.reduce((sum, t) => sum + getEdgeScore(t), 0) / total
+        ).toFixed(1)
+      : "0.0"
+
     return {
       total,
       wins,
@@ -38,7 +44,8 @@ export default function Dashboard() {
       winRate,
       expectancy,
       bestSession,
-      bestPair
+      bestPair,
+      avgEdgeScore
     }
   }, [trades])
 
@@ -68,8 +75,12 @@ export default function Dashboard() {
           <Link href="/dashboard" style={activeNav}>
             Dashboard
           </Link>
-          <button style={navBtn}>My Model</button>
-          <Link href="/examples" style={navBtnLink}>Example Library</Link>
+          <Link href="/model" style={navBtnLink}>
+            My Model
+          </Link>
+          <Link href="/examples" style={navBtnLink}>
+            Example Library
+          </Link>
           <Link href="/journal" style={navBtnLink}>
             Trade Journal
           </Link>
@@ -77,7 +88,9 @@ export default function Dashboard() {
           <Link href="/coach" style={navBtnLink}>
             AI Coach
           </Link>
-          <Link href="/reports" style={navBtnLink}>Reports</Link>
+          <Link href="/reports" style={navBtnLink}>
+            Reports
+          </Link>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1.35fr 0.95fr", gap: "20px", marginBottom: "20px" }}>
@@ -126,7 +139,7 @@ export default function Dashboard() {
                 "1. Total trades and win rate",
                 "2. Expectancy per trade",
                 "3. Best session and pair",
-                "4. Most recent reviewed trades"
+                "4. Average edge score"
               ].map((item) => (
                 <div key={item} style={loopCard}>
                   {item}
@@ -168,10 +181,10 @@ export default function Dashboard() {
 
           <div style={statWrap}>
             <div>
-              <div style={{ color: "#64748b", fontSize: "18px", marginBottom: "18px" }}>Best Session</div>
-              <div style={{ fontSize: "42px", fontWeight: 700, lineHeight: 1 }}>{analytics.bestSession}</div>
+              <div style={{ color: "#64748b", fontSize: "18px", marginBottom: "18px" }}>Average Edge Score</div>
+              <div style={{ fontSize: "42px", fontWeight: 700, lineHeight: 1 }}>{analytics.avgEdgeScore}/10</div>
               <div style={{ color: "#64748b", fontSize: "17px", marginTop: "18px" }}>
-                Best Pair: {analytics.bestPair}
+                Best Session: {analytics.bestSession} • Best Pair: {analytics.bestPair}
               </div>
             </div>
             <div style={statIcon}>◉</div>
@@ -217,7 +230,7 @@ export default function Dashboard() {
                       fontWeight: 700
                     }}
                   >
-                    {trade.r_multiple ?? "-"}R
+                    {getEdgeScore(trade)}/10
                   </div>
                 </div>
 
@@ -256,6 +269,22 @@ function getBestBucket(rows, field) {
   })
 
   return bestKey
+}
+
+function getEdgeScore(trade) {
+  let score = 0
+
+  if (trade.weekly_bias && trade.daily_bias && trade.weekly_bias === trade.daily_bias && trade.weekly_bias !== "Neutral") score += 2
+  if (trade.retest === "First") score += 1
+  if (trade.quality === "Clean" || trade.quality === "GOOD" || trade.quality === "Good") score += 1
+  if (trade.session === "London" || trade.session === "New York") score += 1
+  if (trade.entry_type === "Rejection" || trade.entry_type === "Sweep") score += 1
+  if (trade.approach_type === "Impulse") score += 1
+  if (trade.level_freshness === "Fresh") score += 1
+  if (trade.space_to_opposing_zone === "High") score += 1
+  if (trade.momentum_state === "Strong") score += 1
+
+  return score
 }
 
 const whiteCard = {
