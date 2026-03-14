@@ -24,22 +24,30 @@ export default function Examples() {
       edgeScore: getEdgeScore(trade)
     }))
 
-    const aGradeExamples = enriched
-      .filter((t) => t.result === "Win" && t.edgeScore >= 8)
+    const winners = enriched.filter((t) => t.result === "Win")
+    const losers = enriched.filter((t) => t.result === "Loss")
+
+    const aGradeExamples = winners
+      .filter((t) => t.edgeScore >= 8)
       .sort((a, b) => b.edgeScore - a.edgeScore || Number(b.r_multiple || 0) - Number(a.r_multiple || 0))
 
-    const strongExamples = enriched
-      .filter((t) => t.result === "Win" && t.edgeScore >= 6)
+    const strongExamples = winners
+      .filter((t) => t.edgeScore >= 6)
       .sort((a, b) => b.edgeScore - a.edgeScore || Number(b.r_multiple || 0) - Number(a.r_multiple || 0))
 
     const weakExamples = enriched
       .filter((t) => t.result === "Loss" || t.edgeScore <= 3)
       .sort((a, b) => a.edgeScore - b.edgeScore || Number(a.r_multiple || 0) - Number(b.r_multiple || 0))
 
+    const weakExamplesWithMatches = weakExamples.map((trade) => ({
+      ...trade,
+      mostSimilarWinning: getMostSimilarWinningTrade(trade, winners)
+    }))
+
     return {
       aGradeExamples,
       strongExamples,
-      weakExamples
+      weakExamplesWithMatches
     }
   }, [trades])
 
@@ -88,7 +96,7 @@ export default function Examples() {
           >
             <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
               <span style={pillDark}>Example Library</span>
-              <span style={pillDark}>A-Grade Setups</span>
+              <span style={pillDark}>Pattern Matching</span>
             </div>
 
             <div style={{ fontSize: "60px", fontWeight: 700, lineHeight: 1.02, marginBottom: "18px" }}>
@@ -96,7 +104,7 @@ export default function Examples() {
             </div>
 
             <div style={{ fontSize: "22px", lineHeight: 1.45, maxWidth: "820px", color: "rgba(255,255,255,0.92)" }}>
-              Your best and worst trades now get ranked by setup quality, so the coach can point you toward A-grade examples and away from weak setups.
+              Your best and worst trades are now ranked by setup quality, and weak examples can be compared against their closest winning matches.
             </div>
 
             <div style={{ display: "flex", gap: "14px", marginTop: "28px", flexWrap: "wrap" }}>
@@ -119,8 +127,8 @@ export default function Examples() {
               {[
                 "1. A-grade winning examples",
                 "2. Strong setups worth repeating",
-                "3. Weak examples to avoid",
-                "4. Trade references for the coach"
+                "3. Weak examples with winning comparisons",
+                "4. Pattern clusters for the coach"
               ].map((item) => (
                 <div key={item} style={loopCard}>
                   {item}
@@ -167,15 +175,15 @@ export default function Examples() {
         </div>
 
         <div style={whiteCard}>
-          <div style={{ fontSize: "34px", fontWeight: "700", marginBottom: "8px" }}>Weak Examples</div>
+          <div style={{ fontSize: "34px", fontWeight: "700", marginBottom: "8px" }}>Weak Examples + Closest Winning Match</div>
           <div style={{ color: "#64748b", fontSize: "18px", marginBottom: "26px" }}>
-            Losing trades and low-score setups to avoid
+            Losing trades and low-score setups matched against their most similar winning example
           </div>
 
           <div style={{ display: "grid", gap: "14px" }}>
-            {analytics.weakExamples.length ? (
-              analytics.weakExamples.slice(0, 8).map((trade) => (
-                <TradeCard key={trade.id} trade={trade} variant="weak" />
+            {analytics.weakExamplesWithMatches.length ? (
+              analytics.weakExamplesWithMatches.slice(0, 8).map((trade) => (
+                <WeakExampleCard key={trade.id} trade={trade} />
               ))
             ) : (
               <div style={loopCard}>No weak examples yet</div>
@@ -190,7 +198,6 @@ export default function Examples() {
 function TradeCard({ trade, variant = "good" }) {
   const bg = variant === "weak" ? "#fff4f4" : variant === "a" ? "#ecfff3" : "#eef9f3"
   const border = variant === "weak" ? "#f5d0d0" : "#d1f0da"
-  const scoreBg = variant === "weak" ? "#fff" : "#fff"
   const scoreColor = variant === "weak" ? "#c24141" : "#0f8b62"
 
   return (
@@ -226,7 +233,7 @@ function TradeCard({ trade, variant = "good" }) {
         <div
           style={{
             border: "1px solid #bce8c9",
-            background: scoreBg,
+            background: "white",
             color: scoreColor,
             borderRadius: "18px",
             padding: "10px 14px",
@@ -239,14 +246,118 @@ function TradeCard({ trade, variant = "good" }) {
           {trade.edgeScore}/10
         </div>
       </div>
-
-      {trade.chart_link ? (
-        <div style={{ marginTop: "14px" }}>
-          <span style={chartLink}>View Chart</span>
-        </div>
-      ) : null}
     </Link>
   )
+}
+
+function WeakExampleCard({ trade }) {
+  return (
+    <div
+      style={{
+        padding: "18px",
+        border: "1px solid #f5d0d0",
+        borderRadius: "24px",
+        background: "#fff7f7"
+      }}
+    >
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <div style={{ fontWeight: 700, fontSize: "20px" }}>{trade.pair || "No pair"}</div>
+            <span style={resultBadge(trade.result)}>{trade.result || "No result"}</span>
+            <span style={gradeBadge(trade.edgeScore)}>{getGradeLabel(trade.edgeScore)}</span>
+          </div>
+
+          <div style={{ marginTop: "8px", color: "#64748b", fontSize: "15px" }}>
+            {trade.session || "No session"} • {trade.weekly_bias || "-"} / {trade.daily_bias || "-"} / {trade.context_4h || "-"}
+          </div>
+
+          <div style={{ marginTop: "12px", fontSize: "15px", color: "#475569", lineHeight: 1.45 }}>
+            {trade.explanation || "No explanation"}
+          </div>
+
+          <div style={{ marginTop: "14px" }}>
+            <Link href={`/trade/${trade.id}`} style={chartLink}>
+              Open Weak Trade
+            </Link>
+          </div>
+        </div>
+
+        <div
+          style={{
+            padding: "16px",
+            border: "1px solid #d1f0da",
+            borderRadius: "20px",
+            background: "#eef9f3"
+          }}
+        >
+          <div style={{ fontWeight: 700, fontSize: "17px", marginBottom: "10px" }}>
+            Closest Winning Match
+          </div>
+
+          {trade.mostSimilarWinning ? (
+            <>
+              <div style={{ fontWeight: 700 }}>
+                {trade.mostSimilarWinning.pair} — {trade.mostSimilarWinning.session}
+              </div>
+              <div style={{ marginTop: "6px", color: "#64748b", fontSize: "14px" }}>
+                Similarity: {trade.mostSimilarWinning.similarity}%
+              </div>
+              <div style={{ marginTop: "10px", color: "#475569", fontSize: "14px", lineHeight: 1.45 }}>
+                {trade.mostSimilarWinning.explanation || "No explanation"}
+              </div>
+              <div style={{ marginTop: "12px" }}>
+                <Link href={`/trade/${trade.mostSimilarWinning.id}`} style={chartLink}>
+                  Open Winning Match
+                </Link>
+              </div>
+            </>
+          ) : (
+            <div style={{ color: "#64748b" }}>Need more winning examples</div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function getMostSimilarWinningTrade(targetTrade, winners) {
+  if (!winners.length) return null
+
+  const matches = winners
+    .filter((t) => t.id !== targetTrade.id)
+    .map((t) => ({
+      ...t,
+      similarity: getSimilarityScore(targetTrade, t)
+    }))
+    .sort((a, b) => b.similarity - a.similarity)
+
+  return matches[0] || null
+}
+
+function getSimilarityScore(a, b) {
+  let score = 0
+  const fields = [
+    "session",
+    "weekly_bias",
+    "daily_bias",
+    "context_4h",
+    "retest",
+    "entry_type",
+    "quality",
+    "approach_type",
+    "level_freshness",
+    "space_to_opposing_zone",
+    "momentum_state",
+    "structure_state",
+    "zone_clarity"
+  ]
+
+  fields.forEach((field) => {
+    if (a[field] && b[field] && a[field] === b[field]) score += 1
+  })
+
+  return Math.round((score / fields.length) * 100)
 }
 
 function getEdgeScore(trade) {
