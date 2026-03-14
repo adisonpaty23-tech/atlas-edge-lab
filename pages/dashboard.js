@@ -69,7 +69,7 @@ export default function Dashboard() {
             Dashboard
           </Link>
           <button style={navBtn}>My Model</button>
-          <button style={navBtn}>Example Library</button>
+          <Link href="/examples" style={navBtnLink}>Example Library</Link>
           <Link href="/journal" style={navBtnLink}>
             Trade Journal
           </Link>
