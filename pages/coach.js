@@ -25,15 +25,18 @@ export default function Coach() {
     const winRate = total ? Math.round((wins / total) * 100) : 0
 
     const bestSession = getBestBucket(trades, "session")
-    const weakMomentum = getWinRate(trades.filter((t) => t.momentum_state === "Weak"))
-    const strongMomentum = getWinRate(trades.filter((t) => t.momentum_state === "Strong"))
-    const usedLevels = getWinRate(trades.filter((t) => t.level_freshness === "Used"))
-    const freshLevels = getWinRate(trades.filter((t) => t.level_freshness === "Fresh"))
-    const firstRetest = getWinRate(trades.filter((t) => t.retest === "First"))
-    const laterRetest = getWinRate(trades.filter((t) => t.retest && t.retest !== "First"))
-
     const weakPattern = getWeakPattern(trades)
     const bestPattern = getBestPattern(trades)
+
+    const strongScoreTrades = trades.filter((t) => getEdgeScore(t) >= 7)
+    const weakScoreTrades = trades.filter((t) => getEdgeScore(t) <= 3)
+
+    const strongScoreWinRate = getWinRate(strongScoreTrades)
+    const weakScoreWinRate = getWinRate(weakScoreTrades)
+
+    const avgEdgeScore = total
+      ? (trades.reduce((sum, t) => sum + getEdgeScore(t), 0) / total).toFixed(1)
+      : "0.0"
 
     return {
       total,
@@ -41,14 +44,11 @@ export default function Coach() {
       losses,
       winRate,
       bestSession,
-      weakMomentum,
-      strongMomentum,
-      usedLevels,
-      freshLevels,
-      firstRetest,
-      laterRetest,
       weakPattern,
-      bestPattern
+      bestPattern,
+      strongScoreWinRate,
+      weakScoreWinRate,
+      avgEdgeScore
     }
   }, [trades])
 
@@ -75,18 +75,12 @@ export default function Coach() {
             marginBottom: "20px"
           }}
         >
-          <Link href="/dashboard" style={navBtnLink}>
-            Dashboard
-          </Link>
-          <button style={navBtn}>My Model</button>
+          <Link href="/dashboard" style={navBtnLink}>Dashboard</Link>
+          <Link href="/model" style={navBtnLink}>My Model</Link>
           <Link href="/examples" style={navBtnLink}>Example Library</Link>
-          <Link href="/journal" style={navBtnLink}>
-            Trade Journal
-          </Link>
+          <Link href="/journal" style={navBtnLink}>Trade Journal</Link>
           <button style={navBtn}>Screenshot AI</button>
-          <Link href="/coach" style={activeNav}>
-            AI Coach
-          </Link>
+          <Link href="/coach" style={activeNav}>AI Coach</Link>
           <Link href="/reports" style={navBtnLink}>Reports</Link>
         </div>
 
@@ -103,7 +97,7 @@ export default function Coach() {
           >
             <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
               <span style={pillDark}>AI Coach</span>
-              <span style={pillDark}>Pattern Engine</span>
+              <span style={pillDark}>Edge Score Engine</span>
             </div>
 
             <div style={{ fontSize: "60px", fontWeight: 700, lineHeight: 1.02, marginBottom: "18px" }}>
@@ -111,8 +105,7 @@ export default function Coach() {
             </div>
 
             <div style={{ fontSize: "22px", lineHeight: 1.45, maxWidth: "820px", color: "rgba(255,255,255,0.92)" }}>
-              Compare winners and losers, detect hidden weaknesses, and highlight the conditions your system should keep
-              repeating more often.
+              Compare winners and losers, detect weak conditions, and see whether your strongest scored setups actually outperform your weaker ones.
             </div>
 
             <div style={{ display: "flex", gap: "14px", marginTop: "28px", flexWrap: "wrap" }}>
@@ -134,9 +127,9 @@ export default function Coach() {
             <div style={{ display: "grid", gap: "16px" }}>
               {[
                 "1. Win rate and session quality",
-                "2. First retest vs later retest",
-                "3. Fresh level vs used level",
-                "4. Strong momentum vs weak momentum"
+                "2. Best pattern vs weakest pattern",
+                "3. Strong edge score vs weak edge score",
+                "4. Average setup quality across all trades"
               ].map((item) => (
                 <div key={item} style={loopCard}>
                   {item}
@@ -169,18 +162,18 @@ export default function Coach() {
 
           <div style={statWrap}>
             <div>
-              <div style={{ color: "#64748b", fontSize: "18px", marginBottom: "18px" }}>Best Session</div>
-              <div style={{ fontSize: "42px", fontWeight: 700, lineHeight: 1 }}>{analytics.bestSession}</div>
-              <div style={{ color: "#64748b", fontSize: "17px", marginTop: "18px" }}>Strongest environment so far</div>
+              <div style={{ color: "#64748b", fontSize: "18px", marginBottom: "18px" }}>Average Edge Score</div>
+              <div style={{ fontSize: "42px", fontWeight: 700, lineHeight: 1 }}>{analytics.avgEdgeScore}/10</div>
+              <div style={{ color: "#64748b", fontSize: "17px", marginTop: "18px" }}>Average setup quality</div>
             </div>
             <div style={statIcon}>◉</div>
           </div>
 
           <div style={statWrap}>
             <div>
-              <div style={{ color: "#64748b", fontSize: "18px", marginBottom: "18px" }}>Weakest Pattern</div>
-              <div style={{ fontSize: "34px", fontWeight: 700, lineHeight: 1.15 }}>{analytics.weakPattern}</div>
-              <div style={{ color: "#64748b", fontSize: "17px", marginTop: "18px" }}>Main condition to avoid</div>
+              <div style={{ color: "#64748b", fontSize: "18px", marginBottom: "18px" }}>Best Session</div>
+              <div style={{ fontSize: "42px", fontWeight: 700, lineHeight: 1 }}>{analytics.bestSession}</div>
+              <div style={{ color: "#64748b", fontSize: "17px", marginTop: "18px" }}>Strongest environment so far</div>
             </div>
             <div style={statIcon}>✣</div>
           </div>
@@ -203,18 +196,11 @@ export default function Coach() {
               </div>
 
               <div style={goodPill}>
-                First retests vs later retests: <strong>{analytics.firstRetest}%</strong> vs{" "}
-                <strong>{analytics.laterRetest}%</strong>
-              </div>
-
-              <div style={goodPill}>
-                Fresh levels vs used levels: <strong>{analytics.freshLevels}%</strong> vs{" "}
-                <strong>{analytics.usedLevels}%</strong>
+                Strong edge score trades (7+/10): <strong>{analytics.strongScoreWinRate}%</strong> win rate
               </div>
 
               <div style={badPill}>
-                Strong momentum vs weak momentum: <strong>{analytics.strongMomentum}%</strong> vs{" "}
-                <strong>{analytics.weakMomentum}%</strong>
+                Weak edge score trades (3/10 or below): <strong>{analytics.weakScoreWinRate}%</strong> win rate
               </div>
             </div>
           </div>
@@ -228,9 +214,9 @@ export default function Coach() {
             <div style={{ display: "grid", gap: "14px" }}>
               {[
                 `Keep prioritizing ${analytics.bestPattern.toLowerCase()}`,
-                `Cut down ${analytics.weakPattern.toLowerCase()} setups`,
-                "Review your best session and trade in that environment more often",
-                "Use journal notes to explain why a trade worked or failed"
+                `Reduce ${analytics.weakPattern.toLowerCase()} setups`,
+                "Put more capital behind 7+/10 setups only",
+                "Use trade detail pages to compare weak vs strong scored trades"
               ].map((item) => (
                 <div key={item} style={loopCard}>
                   {item}
@@ -279,7 +265,7 @@ export default function Coach() {
                       fontWeight: 700
                     }}
                   >
-                    {trade.r_multiple ?? "-"}R
+                    {getEdgeScore(trade)}/10
                   </div>
                 </div>
 
@@ -303,7 +289,6 @@ function getWinRate(rows) {
 
 function getBestBucket(rows, field) {
   const buckets = {}
-
   rows.forEach((row) => {
     const key = row[field]
     if (!key) return
@@ -347,6 +332,22 @@ function getWeakPattern(rows) {
 
   if (!patterns.length) return "Need more data"
   return [...patterns].sort((a, b) => a.rate - b.rate)[0].label
+}
+
+function getEdgeScore(trade) {
+  let score = 0
+
+  if (trade.weekly_bias && trade.daily_bias && trade.weekly_bias === trade.daily_bias && trade.weekly_bias !== "Neutral") score += 2
+  if (trade.retest === "First") score += 1
+  if (trade.quality === "Clean" || trade.quality === "GOOD" || trade.quality === "Good") score += 1
+  if (trade.session === "London" || trade.session === "New York") score += 1
+  if (trade.entry_type === "Rejection" || trade.entry_type === "Sweep") score += 1
+  if (trade.approach_type === "Impulse") score += 1
+  if (trade.level_freshness === "Fresh") score += 1
+  if (trade.space_to_opposing_zone === "High") score += 1
+  if (trade.momentum_state === "Strong") score += 1
+
+  return score
 }
 
 const whiteCard = {
