@@ -26,7 +26,7 @@ export default function Model() {
         >
           <Link href="/dashboard" style={navBtnLink}>Dashboard</Link>
           <Link href="/model" style={activeNav}>My Model</Link>
-          <button style={navBtn}>Example Library</button>
+          <Link href="/examples" style={navBtnLink}>Example Library</Link>
           <Link href="/journal" style={navBtnLink}>Trade Journal</Link>
           <button style={navBtn}>Screenshot AI</button>
           <Link href="/coach" style={navBtnLink}>AI Coach</Link>
