@@ -2,7 +2,7 @@ import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 import { supabase } from "../lib/supabase"
 
-export default function Coach() {
+export default function Examples() {
   const [trades, setTrades] = useState([])
 
   async function fetchTrades() {
@@ -19,36 +19,35 @@ export default function Coach() {
   }, [])
 
   const analytics = useMemo(() => {
-    const total = trades.length
-    const wins = trades.filter((t) => t.result === "Win").length
-    const losses = trades.filter((t) => t.result === "Loss").length
-    const winRate = total ? Math.round((wins / total) * 100) : 0
+    const enriched = trades.map((trade) => ({
+      ...trade,
+      edgeScore: getEdgeScore(trade)
+    }))
 
-    const bestSession = getBestBucket(trades, "session")
-    const weakPattern = getWeakPattern(trades)
-    const bestPattern = getBestPattern(trades)
+    const winners = enriched.filter((t) => t.result === "Win")
+    const losers = enriched.filter((t) => t.result === "Loss")
 
-    const strongScoreTrades = trades.filter((t) => getEdgeScore(t) >= 7)
-    const weakScoreTrades = trades.filter((t) => getEdgeScore(t) <= 3)
+    const aGradeExamples = winners
+      .filter((t) => t.edgeScore >= 8)
+      .sort((a, b) => b.edgeScore - a.edgeScore || Number(b.r_multiple || 0) - Number(a.r_multiple || 0))
 
-    const strongScoreWinRate = getWinRate(strongScoreTrades)
-    const weakScoreWinRate = getWinRate(weakScoreTrades)
+    const strongExamples = winners
+      .filter((t) => t.edgeScore >= 6)
+      .sort((a, b) => b.edgeScore - a.edgeScore || Number(b.r_multiple || 0) - Number(a.r_multiple || 0))
 
-    const avgEdgeScore = total
-      ? (trades.reduce((sum, t) => sum + getEdgeScore(t), 0) / total).toFixed(1)
-      : "0.0"
+    const weakExamples = enriched
+      .filter((t) => t.result === "Loss" || t.edgeScore <= 3)
+      .sort((a, b) => a.edgeScore - b.edgeScore || Number(a.r_multiple || 0) - Number(b.r_multiple || 0))
+
+    const weakExamplesWithMatches = weakExamples.map((trade) => ({
+      ...trade,
+      mostSimilarWinning: getMostSimilarWinningTrade(trade, winners)
+    }))
 
     return {
-      total,
-      wins,
-      losses,
-      winRate,
-      bestSession,
-      weakPattern,
-      bestPattern,
-      strongScoreWinRate,
-      weakScoreWinRate,
-      avgEdgeScore
+      aGradeExamples,
+      strongExamples,
+      weakExamplesWithMatches
     }
   }, [trades])
 
@@ -77,10 +76,10 @@ export default function Coach() {
         >
           <Link href="/dashboard" style={navBtnLink}>Dashboard</Link>
           <Link href="/model" style={navBtnLink}>My Model</Link>
-          <Link href="/examples" style={navBtnLink}>Example Library</Link>
+          <Link href="/examples" style={activeNav}>Example Library</Link>
           <Link href="/journal" style={navBtnLink}>Trade Journal</Link>
           <button style={navBtn}>Screenshot AI</button>
-          <Link href="/coach" style={activeNav}>AI Coach</Link>
+          <Link href="/coach" style={navBtnLink}>AI Coach</Link>
           <Link href="/reports" style={navBtnLink}>Reports</Link>
         </div>
 
@@ -96,40 +95,40 @@ export default function Coach() {
             }}
           >
             <div style={{ display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" }}>
-              <span style={pillDark}>AI Coach</span>
-              <span style={pillDark}>Edge Score Engine</span>
+              <span style={pillDark}>Example Library</span>
+              <span style={pillDark}>Pattern Matching</span>
             </div>
 
             <div style={{ fontSize: "60px", fontWeight: 700, lineHeight: 1.02, marginBottom: "18px" }}>
-              Coach Your Edge
+              Build Your Playbook
             </div>
 
             <div style={{ fontSize: "22px", lineHeight: 1.45, maxWidth: "820px", color: "rgba(255,255,255,0.92)" }}>
-              Compare winners and losers, detect weak conditions, and see whether your strongest scored setups actually outperform your weaker ones.
+              Your best and worst trades are now ranked by setup quality, and weak examples can be compared against their closest winning matches.
             </div>
 
             <div style={{ display: "flex", gap: "14px", marginTop: "28px", flexWrap: "wrap" }}>
               <Link href="/journal" style={primaryBtn}>
-                Review journal <span style={{ marginLeft: "12px" }}>›</span>
+                Add more trades <span style={{ marginLeft: "12px" }}>›</span>
               </Link>
-              <Link href="/dashboard" style={secondaryBtn}>
-                Open dashboard
+              <Link href="/coach" style={secondaryBtn}>
+                Open AI Coach
               </Link>
             </div>
           </div>
 
           <div style={whiteCardLarge}>
-            <div style={{ fontSize: "32px", fontWeight: 700, marginBottom: "6px" }}>Coach Focus</div>
+            <div style={{ fontSize: "32px", fontWeight: 700, marginBottom: "6px" }}>Library Focus</div>
             <div style={{ color: "#64748b", fontSize: "18px", marginBottom: "28px" }}>
-              What this page reads from your trades
+              What this page now highlights
             </div>
 
             <div style={{ display: "grid", gap: "16px" }}>
               {[
-                "1. Win rate and session quality",
-                "2. Best pattern vs weakest pattern",
-                "3. Strong edge score vs weak edge score",
-                "4. Average setup quality across all trades"
+                "1. A-grade winning examples",
+                "2. Strong setups worth repeating",
+                "3. Weak examples with winning comparisons",
+                "4. Pattern clusters for the coach"
               ].map((item) => (
                 <div key={item} style={loopCard}>
                   {item}
@@ -140,140 +139,55 @@ export default function Coach() {
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
-          <div style={statWrap}>
-            <div>
-              <div style={{ color: "#64748b", fontSize: "18px", marginBottom: "18px" }}>Total Trades</div>
-              <div style={{ fontSize: "58px", fontWeight: 700, lineHeight: 1 }}>{analytics.total}</div>
-              <div style={{ color: "#64748b", fontSize: "17px", marginTop: "18px" }}>
-                {analytics.wins} wins / {analytics.losses} losses
-              </div>
-            </div>
-            <div style={statIcon}>◎</div>
-          </div>
-
-          <div style={statWrap}>
-            <div>
-              <div style={{ color: "#64748b", fontSize: "18px", marginBottom: "18px" }}>Win Rate</div>
-              <div style={{ fontSize: "58px", fontWeight: 700, lineHeight: 1 }}>{analytics.winRate}%</div>
-              <div style={{ color: "#64748b", fontSize: "17px", marginTop: "18px" }}>Current overall performance</div>
-            </div>
-            <div style={statIcon}>↗</div>
-          </div>
-
-          <div style={statWrap}>
-            <div>
-              <div style={{ color: "#64748b", fontSize: "18px", marginBottom: "18px" }}>Average Edge Score</div>
-              <div style={{ fontSize: "42px", fontWeight: 700, lineHeight: 1 }}>{analytics.avgEdgeScore}/10</div>
-              <div style={{ color: "#64748b", fontSize: "17px", marginTop: "18px" }}>Average setup quality</div>
-            </div>
-            <div style={statIcon}>◉</div>
-          </div>
-
-          <div style={statWrap}>
-            <div>
-              <div style={{ color: "#64748b", fontSize: "18px", marginBottom: "18px" }}>Best Session</div>
-              <div style={{ fontSize: "42px", fontWeight: 700, lineHeight: 1 }}>{analytics.bestSession}</div>
-              <div style={{ color: "#64748b", fontSize: "17px", marginTop: "18px" }}>Strongest environment so far</div>
-            </div>
-            <div style={statIcon}>✣</div>
-          </div>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
           <div style={whiteCard}>
-            <div style={{ fontSize: "34px", fontWeight: 700, marginBottom: "8px" }}>Coach Summary</div>
+            <div style={{ fontSize: "34px", fontWeight: "700", marginBottom: "8px" }}>A-Grade Examples</div>
             <div style={{ color: "#64748b", fontSize: "18px", marginBottom: "26px" }}>
-              Current conclusions from your saved trades
+              Winning trades scored 8+/10
             </div>
 
             <div style={{ display: "grid", gap: "14px" }}>
-              <div style={goodPill}>
-                Strongest pattern right now: <strong>{analytics.bestPattern}</strong>
-              </div>
-
-              <div style={badPill}>
-                Main weakness right now: <strong>{analytics.weakPattern}</strong>
-              </div>
-
-              <div style={goodPill}>
-                Strong edge score trades (7+/10): <strong>{analytics.strongScoreWinRate}%</strong> win rate
-              </div>
-
-              <div style={badPill}>
-                Weak edge score trades (3/10 or below): <strong>{analytics.weakScoreWinRate}%</strong> win rate
-              </div>
+              {analytics.aGradeExamples.length ? (
+                analytics.aGradeExamples.slice(0, 6).map((trade) => (
+                  <TradeCard key={trade.id} trade={trade} variant="a" />
+                ))
+              ) : (
+                <div style={loopCard}>No A-grade examples yet</div>
+              )}
             </div>
           </div>
 
           <div style={whiteCard}>
-            <div style={{ fontSize: "34px", fontWeight: 700, marginBottom: "8px" }}>Action Focus</div>
+            <div style={{ fontSize: "34px", fontWeight: "700", marginBottom: "8px" }}>Strong Examples</div>
             <div style={{ color: "#64748b", fontSize: "18px", marginBottom: "26px" }}>
-              What the coach wants you to do next
+              Good winning trades scored 6+/10
             </div>
 
             <div style={{ display: "grid", gap: "14px" }}>
-              {[
-                `Keep prioritizing ${analytics.bestPattern.toLowerCase()}`,
-                `Reduce ${analytics.weakPattern.toLowerCase()} setups`,
-                "Put more capital behind 7+/10 setups only",
-                "Use trade detail pages to compare weak vs strong scored trades"
-              ].map((item) => (
-                <div key={item} style={loopCard}>
-                  {item}
-                </div>
-              ))}
+              {analytics.strongExamples.length ? (
+                analytics.strongExamples.slice(0, 6).map((trade) => (
+                  <TradeCard key={trade.id} trade={trade} variant="good" />
+                ))
+              ) : (
+                <div style={loopCard}>No strong examples yet</div>
+              )}
             </div>
           </div>
         </div>
 
         <div style={whiteCard}>
-          <div style={{ fontSize: "34px", fontWeight: 700, marginBottom: "8px" }}>Recent Trades Reviewed</div>
+          <div style={{ fontSize: "34px", fontWeight: "700", marginBottom: "8px" }}>Weak Examples + Closest Winning Match</div>
           <div style={{ color: "#64748b", fontSize: "18px", marginBottom: "26px" }}>
-            Latest trades feeding the coach engine
+            Losing trades and low-score setups matched against their most similar winning example
           </div>
 
           <div style={{ display: "grid", gap: "14px" }}>
-            {trades.slice(0, 6).map((trade) => (
-              <div
-                key={trade.id}
-                style={{
-                  padding: "18px",
-                  border: "1px solid #d1f0da",
-                  borderRadius: "24px",
-                  background: "#eef9f3"
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "14px" }}>
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                      <div style={{ fontWeight: 700, fontSize: "20px" }}>{trade.pair || "No pair"}</div>
-                      <span style={resultBadge(trade.result)}>{trade.result || "No result"}</span>
-                    </div>
-                    <div style={{ marginTop: "8px", color: "#64748b", fontSize: "15px" }}>
-                      {trade.session || "No session"} • {trade.weekly_bias || "-"} / {trade.daily_bias || "-"} / {trade.context_4h || "-"}
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      border: "1px solid #bce8c9",
-                      background: "white",
-                      color: "#0f8b62",
-                      borderRadius: "18px",
-                      padding: "10px 14px",
-                      fontSize: "15px",
-                      fontWeight: 700
-                    }}
-                  >
-                    {getEdgeScore(trade)}/10
-                  </div>
-                </div>
-
-                <div style={{ marginTop: "12px", fontSize: "15px", color: "#475569", lineHeight: 1.45 }}>
-                  {trade.explanation || "No explanation"}
-                </div>
-              </div>
-            ))}
+            {analytics.weakExamplesWithMatches.length ? (
+              analytics.weakExamplesWithMatches.slice(0, 8).map((trade) => (
+                <WeakExampleCard key={trade.id} trade={trade} />
+              ))
+            ) : (
+              <div style={loopCard}>No weak examples yet</div>
+            )}
           </div>
         </div>
       </div>
@@ -281,57 +195,169 @@ export default function Coach() {
   )
 }
 
-function getWinRate(rows) {
-  if (!rows.length) return 0
-  const wins = rows.filter((t) => t.result === "Win").length
-  return Math.round((wins / rows.length) * 100)
+function TradeCard({ trade, variant = "good" }) {
+  const bg = variant === "weak" ? "#fff4f4" : variant === "a" ? "#ecfff3" : "#eef9f3"
+  const border = variant === "weak" ? "#f5d0d0" : "#d1f0da"
+  const scoreColor = variant === "weak" ? "#c24141" : "#0f8b62"
+
+  return (
+    <Link
+      href={`/trade/${trade.id}`}
+      style={{
+        textDecoration: "none",
+        color: "inherit",
+        display: "block",
+        padding: "18px",
+        border: `1px solid ${border}`,
+        borderRadius: "24px",
+        background: bg
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "14px" }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <div style={{ fontWeight: 700, fontSize: "20px" }}>{trade.pair || "No pair"}</div>
+            <span style={resultBadge(trade.result)}>{trade.result || "No result"}</span>
+            <span style={gradeBadge(trade.edgeScore)}>{getGradeLabel(trade.edgeScore)}</span>
+          </div>
+
+          <div style={{ marginTop: "8px", color: "#64748b", fontSize: "15px" }}>
+            {trade.session || "No session"} • {trade.weekly_bias || "-"} / {trade.daily_bias || "-"} / {trade.context_4h || "-"}
+          </div>
+
+          <div style={{ marginTop: "12px", fontSize: "15px", color: "#475569", lineHeight: 1.45 }}>
+            {trade.explanation || "No explanation"}
+          </div>
+        </div>
+
+        <div
+          style={{
+            border: "1px solid #bce8c9",
+            background: "white",
+            color: scoreColor,
+            borderRadius: "18px",
+            padding: "10px 14px",
+            fontSize: "15px",
+            fontWeight: 700,
+            minWidth: "64px",
+            textAlign: "center"
+          }}
+        >
+          {trade.edgeScore}/10
+        </div>
+      </div>
+    </Link>
+  )
 }
 
-function getBestBucket(rows, field) {
-  const buckets = {}
-  rows.forEach((row) => {
-    const key = row[field]
-    if (!key) return
-    if (!buckets[key]) buckets[key] = []
-    buckets[key].push(row)
+function WeakExampleCard({ trade }) {
+  return (
+    <div
+      style={{
+        padding: "18px",
+        border: "1px solid #f5d0d0",
+        borderRadius: "24px",
+        background: "#fff7f7"
+      }}
+    >
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px" }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <div style={{ fontWeight: 700, fontSize: "20px" }}>{trade.pair || "No pair"}</div>
+            <span style={resultBadge(trade.result)}>{trade.result || "No result"}</span>
+            <span style={gradeBadge(trade.edgeScore)}>{getGradeLabel(trade.edgeScore)}</span>
+          </div>
+
+          <div style={{ marginTop: "8px", color: "#64748b", fontSize: "15px" }}>
+            {trade.session || "No session"} • {trade.weekly_bias || "-"} / {trade.daily_bias || "-"} / {trade.context_4h || "-"}
+          </div>
+
+          <div style={{ marginTop: "12px", fontSize: "15px", color: "#475569", lineHeight: 1.45 }}>
+            {trade.explanation || "No explanation"}
+          </div>
+
+          <div style={{ marginTop: "14px" }}>
+            <Link href={`/trade/${trade.id}`} style={chartLink}>
+              Open Weak Trade
+            </Link>
+          </div>
+        </div>
+
+        <div
+          style={{
+            padding: "16px",
+            border: "1px solid #d1f0da",
+            borderRadius: "20px",
+            background: "#eef9f3"
+          }}
+        >
+          <div style={{ fontWeight: 700, fontSize: "17px", marginBottom: "10px" }}>
+            Closest Winning Match
+          </div>
+
+          {trade.mostSimilarWinning ? (
+            <>
+              <div style={{ fontWeight: 700 }}>
+                {trade.mostSimilarWinning.pair} — {trade.mostSimilarWinning.session}
+              </div>
+              <div style={{ marginTop: "6px", color: "#64748b", fontSize: "14px" }}>
+                Similarity: {trade.mostSimilarWinning.similarity}%
+              </div>
+              <div style={{ marginTop: "10px", color: "#475569", fontSize: "14px", lineHeight: 1.45 }}>
+                {trade.mostSimilarWinning.explanation || "No explanation"}
+              </div>
+              <div style={{ marginTop: "12px" }}>
+                <Link href={`/trade/${trade.mostSimilarWinning.id}`} style={chartLink}>
+                  Open Winning Match
+                </Link>
+              </div>
+            </>
+          ) : (
+            <div style={{ color: "#64748b" }}>Need more winning examples</div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function getMostSimilarWinningTrade(targetTrade, winners) {
+  if (!winners.length) return null
+
+  const matches = winners
+    .filter((t) => t.id !== targetTrade.id)
+    .map((t) => ({
+      ...t,
+      similarity: getSimilarityScore(targetTrade, t)
+    }))
+    .sort((a, b) => b.similarity - a.similarity)
+
+  return matches[0] || null
+}
+
+function getSimilarityScore(a, b) {
+  let score = 0
+  const fields = [
+    "session",
+    "weekly_bias",
+    "daily_bias",
+    "context_4h",
+    "retest",
+    "entry_type",
+    "quality",
+    "approach_type",
+    "level_freshness",
+    "space_to_opposing_zone",
+    "momentum_state",
+    "structure_state",
+    "zone_clarity"
+  ]
+
+  fields.forEach((field) => {
+    if (a[field] && b[field] && a[field] === b[field]) score += 1
   })
 
-  let bestKey = "N/A"
-  let bestRate = -1
-
-  Object.entries(buckets).forEach(([key, list]) => {
-    const rate = getWinRate(list)
-    if (rate > bestRate) {
-      bestRate = rate
-      bestKey = key
-    }
-  })
-
-  return bestKey
-}
-
-function getBestPattern(rows) {
-  const patterns = [
-    { label: "First retests", rate: getWinRate(rows.filter((t) => t.retest === "First")) },
-    { label: "Fresh levels", rate: getWinRate(rows.filter((t) => t.level_freshness === "Fresh")) },
-    { label: "Strong momentum", rate: getWinRate(rows.filter((t) => t.momentum_state === "Strong")) },
-    { label: "London session", rate: getWinRate(rows.filter((t) => t.session === "London")) }
-  ].filter((x) => x.rate > 0)
-
-  if (!patterns.length) return "Need more data"
-  return [...patterns].sort((a, b) => b.rate - a.rate)[0].label
-}
-
-function getWeakPattern(rows) {
-  const patterns = [
-    { label: "Weak momentum", rate: getWinRate(rows.filter((t) => t.momentum_state === "Weak")), count: rows.filter((t) => t.momentum_state === "Weak").length },
-    { label: "Used levels", rate: getWinRate(rows.filter((t) => t.level_freshness === "Used")), count: rows.filter((t) => t.level_freshness === "Used").length },
-    { label: "Later retests", rate: getWinRate(rows.filter((t) => t.retest && t.retest !== "First")), count: rows.filter((t) => t.retest && t.retest !== "First").length },
-    { label: "Neutral daily bias", rate: getWinRate(rows.filter((t) => t.daily_bias === "Neutral")), count: rows.filter((t) => t.daily_bias === "Neutral").length }
-  ].filter((x) => x.count > 0)
-
-  if (!patterns.length) return "Need more data"
-  return [...patterns].sort((a, b) => a.rate - b.rate)[0].label
+  return Math.round((score / fields.length) * 100)
 }
 
 function getEdgeScore(trade) {
@@ -348,6 +374,90 @@ function getEdgeScore(trade) {
   if (trade.momentum_state === "Strong") score += 1
 
   return score
+}
+
+function getGradeLabel(score) {
+  if (score >= 8) return "A Grade"
+  if (score >= 6) return "B Grade"
+  if (score >= 4) return "C Grade"
+  return "Weak"
+}
+
+function gradeBadge(score) {
+  if (score >= 8) {
+    return {
+      background: "#dff7e7",
+      color: "#0f8b62",
+      borderRadius: "999px",
+      padding: "8px 12px",
+      fontSize: "13px",
+      fontWeight: 700
+    }
+  }
+
+  if (score >= 6) {
+    return {
+      background: "#eef9f3",
+      color: "#0f8b62",
+      borderRadius: "999px",
+      padding: "8px 12px",
+      fontSize: "13px",
+      fontWeight: 700
+    }
+  }
+
+  if (score >= 4) {
+    return {
+      background: "#eef2f7",
+      color: "#475569",
+      borderRadius: "999px",
+      padding: "8px 12px",
+      fontSize: "13px",
+      fontWeight: 700
+    }
+  }
+
+  return {
+    background: "#ffe6e6",
+    color: "#c24141",
+    borderRadius: "999px",
+    padding: "8px 12px",
+    fontSize: "13px",
+    fontWeight: 700
+  }
+}
+
+function resultBadge(result) {
+  if (result === "Win") {
+    return {
+      background: "#dff7e7",
+      color: "#0f8b62",
+      borderRadius: "999px",
+      padding: "8px 12px",
+      fontSize: "13px",
+      fontWeight: 700
+    }
+  }
+
+  if (result === "Loss") {
+    return {
+      background: "#ffe6e6",
+      color: "#c24141",
+      borderRadius: "999px",
+      padding: "8px 12px",
+      fontSize: "13px",
+      fontWeight: 700
+    }
+  }
+
+  return {
+    background: "#eef2f7",
+    color: "#475569",
+    borderRadius: "999px",
+    padding: "8px 12px",
+    fontSize: "13px",
+    fontWeight: 700
+  }
 }
 
 const whiteCard = {
@@ -447,80 +557,8 @@ const navBtnLink = {
   justifyContent: "center"
 }
 
-const statWrap = {
-  background: "rgba(255,255,255,0.92)",
-  border: "1px solid #d1f0da",
-  borderRadius: "30px",
-  padding: "30px",
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "flex-start",
-  minHeight: "195px",
-  boxShadow: "0 12px 30px rgba(20, 120, 74, 0.06)"
-}
-
-const statIcon = {
-  width: "70px",
-  height: "70px",
-  borderRadius: "22px",
-  background: "#e9f8ef",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
+const chartLink = {
+  textDecoration: "none",
   color: "#0f8b62",
-  fontSize: "32px",
   fontWeight: 700
-}
-
-const goodPill = {
-  border: "1px solid #caecd5",
-  background: "#eef9f3",
-  color: "#0f8b62",
-  borderRadius: "22px",
-  padding: "16px 18px",
-  fontSize: "16px",
-  lineHeight: 1.45
-}
-
-const badPill = {
-  border: "1px solid #ffd4d4",
-  background: "#fff0f0",
-  color: "#c24141",
-  borderRadius: "22px",
-  padding: "16px 18px",
-  fontSize: "16px",
-  lineHeight: 1.45
-}
-
-function resultBadge(result) {
-  if (result === "Win") {
-    return {
-      background: "#dff7e7",
-      color: "#0f8b62",
-      borderRadius: "999px",
-      padding: "8px 12px",
-      fontSize: "13px",
-      fontWeight: 700
-    }
-  }
-
-  if (result === "Loss") {
-    return {
-      background: "#ffe6e6",
-      color: "#c24141",
-      borderRadius: "999px",
-      padding: "8px 12px",
-      fontSize: "13px",
-      fontWeight: 700
-    }
-  }
-
-  return {
-    background: "#eef2f7",
-    color: "#475569",
-    borderRadius: "999px",
-    padding: "8px 12px",
-    fontSize: "13px",
-    fontWeight: 700
-  }
 }
