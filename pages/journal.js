@@ -109,7 +109,7 @@ export default function Journal() {
           <Link href="/journal" style={activeNav}>
             Trade Journal
           </Link>
-          <button style={navBtn}>Screenshot AI</button>
+          <Link href="/screenshot-ai" style={navBtnLink}>Screenshot AI</Link>
           <Link href="/coach" style={navBtnLink}>
             AI Coach
           </Link>
