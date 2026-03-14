@@ -36,6 +36,18 @@ export default function TradeDetail() {
     if (!error) setAllTrades(data || [])
   }
 
+  const edgeScore = useMemo(() => {
+    if (!trade) return 0
+    return getEdgeScore(trade)
+  }, [trade])
+
+  const scoreLabel = useMemo(() => {
+    if (edgeScore >= 8) return "A Grade"
+    if (edgeScore >= 6) return "B Grade"
+    if (edgeScore >= 4) return "C Grade"
+    return "Weak Setup"
+  }, [edgeScore])
+
   const similarTrades = useMemo(() => {
     if (!trade || !allTrades.length) return []
 
@@ -68,15 +80,15 @@ export default function TradeDetail() {
     }
 
     if (sameMomentum.length) {
-      notes.push(`Momentum ${trade.momentum_state}: ${getWinRate(sameMomentum)}% win rate`)
+      notes.push(`Momentum ${trade.momentum_state || "N/A"}: ${getWinRate(sameMomentum)}% win rate`)
     }
 
     if (sameFreshness.length) {
-      notes.push(`Level freshness ${trade.level_freshness}: ${getWinRate(sameFreshness)}% win rate`)
+      notes.push(`Level freshness ${trade.level_freshness || "N/A"}: ${getWinRate(sameFreshness)}% win rate`)
     }
 
     if (sameRetest.length) {
-      notes.push(`Retest ${trade.retest}: ${getWinRate(sameRetest)}% win rate`)
+      notes.push(`Retest ${trade.retest || "N/A"}: ${getWinRate(sameRetest)}% win rate`)
     }
 
     return notes
@@ -167,6 +179,7 @@ export default function TradeDetail() {
             <div style={{ display: "grid", gap: "16px" }}>
               <div style={loopCard}>Result: {trade.result || "N/A"}</div>
               <div style={loopCard}>R Multiple: {trade.r_multiple ?? "N/A"}R</div>
+              <div style={loopCard}>Edge Score: {edgeScore}/10 ({scoreLabel})</div>
               <div style={loopCard}>Most similar winning trade: {mostSimilarWinning ? `${mostSimilarWinning.pair} (${mostSimilarWinning.similarity}%)` : "Need more data"}</div>
               <div style={loopCard}>Session: {trade.session || "N/A"}</div>
             </div>
@@ -300,6 +313,22 @@ function getWinRate(rows) {
   return Math.round((wins / rows.length) * 100)
 }
 
+function getEdgeScore(trade) {
+  let score = 0
+
+  if (trade.weekly_bias && trade.daily_bias && trade.weekly_bias === trade.daily_bias && trade.weekly_bias !== "Neutral") score += 2
+  if (trade.retest === "First") score += 1
+  if (trade.quality === "Clean" || trade.quality === "GOOD" || trade.quality === "Good") score += 1
+  if (trade.session === "London" || trade.session === "New York") score += 1
+  if (trade.entry_type === "Rejection" || trade.entry_type === "Sweep") score += 1
+  if (trade.approach_type === "Impulse") score += 1
+  if (trade.level_freshness === "Fresh") score += 1
+  if (trade.space_to_opposing_zone === "High") score += 1
+  if (trade.momentum_state === "Strong") score += 1
+
+  return score
+}
+
 function getSimilarityScore(a, b) {
   let score = 0
   const fields = [
@@ -383,19 +412,6 @@ const loopCard = {
   padding: "22px 20px",
   fontSize: "18px",
   color: "#334155"
-}
-
-const activeNav = {
-  textDecoration: "none",
-  background: "#08a56f",
-  color: "white",
-  borderRadius: "24px",
-  padding: "18px 20px",
-  fontSize: "18px",
-  fontWeight: 600,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center"
 }
 
 const navBtn = {
