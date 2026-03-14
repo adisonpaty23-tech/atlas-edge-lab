@@ -175,7 +175,7 @@ export default function Home() {
           <Link href="/dashboard" style={activeNav}>
             Dashboard
           </Link>
-          <button style={navBtn}>My Model</button>
+          <Link href="/model" style={navBtnLink}>My Model</Link>
           <button style={navBtn}>Example Library</button>
           <Link href="/journal" style={navBtnLink}>
             Trade Journal
