@@ -184,7 +184,9 @@ export default function Home() {
           <Link href="/coach" style={navBtnLink}>
             AI Coach
           </Link>
-          <button style={navBtn}>Reports</button>
+          <Link href="/reports" style={navBtnLink}>
+            Reports
+          </Link>
         </div>
       </div>
     </div>
