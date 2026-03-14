@@ -77,7 +77,7 @@ export default function Examples() {
           <Link href="/model" style={navBtnLink}>My Model</Link>
           <Link href="/examples" style={activeNav}>Example Library</Link>
           <Link href="/journal" style={navBtnLink}>Trade Journal</Link>
-          <button style={navBtn}>Screenshot AI</button>
+          <Link href="/screenshot-ai" style={navBtnLink}>Screenshot AI</Link>
           <Link href="/coach" style={navBtnLink}>AI Coach</Link>
           <Link href="/reports" style={navBtnLink}>Reports</Link>
         </div>
